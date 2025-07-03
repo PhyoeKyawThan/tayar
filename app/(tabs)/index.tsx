@@ -2,18 +2,17 @@ import MusicListItem from "@/components/MusicListView";
 import usePlayer from "@/utils/Player";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { AudioPlayer } from "expo-audio";
-import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 // static mapping for local audio files
 const musicFiles = [
   {
     "title": "Car outside",
-    "file": require("../assets/musics/caroutside.mp3"),
+    "file": require("../../assets/musics/caroutside.mp3"),
   },
   {
     "title": "Say U Won't let go",
-    "file": require("../assets/musics/sayuwontletgo.mp3")
+    "file": require("../../assets/musics/sayuwontletgo.mp3")
   },
 ];
 
@@ -63,7 +62,7 @@ export default function Index() {
       <ScrollView style={{ flex: 1, padding: 20, marginTop: 0 }}>
         {musicFiles.map((music, index) => {
           return (
-            <TouchableOpacity onPress={() => router.push(`/screens/player/${music.title}`)} key={index}>
+            <TouchableOpacity  key={index}>
               <MusicListItem
                 key={index}
                 title={music.title}
