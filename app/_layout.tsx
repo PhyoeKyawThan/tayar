@@ -1,29 +1,27 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { useLocalSearchParams, useNavigation } from "expo-router";
+import { useEffect } from "react";
+import { Text, View } from "react-native";
 
-import { useColorScheme } from '@/hooks/useColorScheme';
+export default function MusicPlayer() {
+    const { musicTitle } = useLocalSearchParams();
+    const navigation = useNavigation();
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
+    useEffect(() => {
+        navigation.setOptions({
+            // tabBarStyle: { display: 'none' },
+            headerRight: () => (
+                <View style={{ flexDirection: "row", alignItems: "center", marginRight: 10 }}>
+                    <Ionicons name="home" size={24} color="#000" onPress={() => navigation.goBack()} />
+                    <Text style={{ marginLeft: 5 }}>Home</Text>
+                </View>
+            ),
+        });
+    }, [navigation]);
 
-  if (!loaded) {
-    // Async font loading only occurs in development.
-    return null;
-  }
-
-  return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
-  );
+    return (
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+            <Text>{musicTitle}</Text>
+        </View>
+    );
 }
