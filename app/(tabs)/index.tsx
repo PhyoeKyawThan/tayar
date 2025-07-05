@@ -1,125 +1,139 @@
-import MusicListItem from "@/components/MusicListView";
-import usePlayer from "@/utils/Player";
+import musicFiles from "@/assets/audioLists";
+import { usePlayerStore } from "@/utils/PlayerStore";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { AudioPlayer } from "expo-audio";
-import { useState } from "react";
+import { AudioSource, useAudioPlayer } from "expo-audio";
+import { useRouter } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-// static mapping for local audio files
-const musicFiles = [
-  {
-    "title": "Car outside",
-    "file": require("../../assets/musics/caroutside.mp3"),
-  },
-  {
-    "title": "Say U Won't let go",
-    "file": require("../../assets/musics/sayuwontletgo.mp3")
-  },
-];
 
-interface PlayerType {
-  playAudio: () => Promise<void>;
-  pauseAudio: () => Promise<void>;
-  isPlaying: boolean;
-  player: AudioPlayer;
-}
+const Home = () => {
 
-export default function Index() {
-  const [currentPlayer, setCurrentPlayer] = useState<PlayerType | null>(null);
-  const [currentPlayerIndex, setCurrentPlayerIndex] = useState(-1);
-
-  const players = musicFiles.map(music => usePlayer(music.file));
-
-
-  function handleModalPress() {
-    currentPlayer?.player.playing ? currentPlayer.pauseAudio() : currentPlayer?.playAudio();
-  }
-
-  function handlePlayPause(index: number) {
-    if (currentPlayerIndex === -1) {
-      // If the current player is the same as the one being pressed, pause it
-      players[index].playAudio();
-      setCurrentPlayerIndex(index);
-      setCurrentPlayer(players[index]);
-      return;
+    const currentRef = useRef(-1);
+    const [currentPlayingIndex, setCurrentPlayingIndex] = useState(-1);
+    const [currentPauseIndex, setCurrentPauseIndex] = useState(-1);
+    const currentSourceRef = useRef<AudioSource | null>(null);
+    const player = useAudioPlayer(null);
+    const currentAudioIndex = usePlayerStore((state) => state.currentAudioIndex);
+    // TODO:\\: need to fix background audio between tabs and screens 
+    // if(currentAudioIndex != null ) {
+    //     handlePlayPause(currentAudioIndex);
+    // }
+    function handlePlayPause(index: number) {
+        if (currentRef.current === index) {
+            player.playing ? player.pause() : player.play();
+            if (player.playing) {
+                setCurrentPlayingIndex(index);
+                setCurrentPauseIndex(-1);
+            }
+            else
+                setCurrentPauseIndex(index);
+            return;
+        }
+        if (currentRef.current != index) {
+            player.replace(currentSourceRef.current);
+            player.play();
+            setCurrentPlayingIndex(index);
+            currentRef.current = index;
+            return;
+        }
     }
-    if (currentPlayerIndex === index) {
-      // If the current player is the same as the one being pressed, pause it
-      players[index].player.playing ? players[index].pauseAudio() : players[index].playAudio();
-      setCurrentPlayer(players[index]);
-      return;
-    }
-    if (currentPlayerIndex !== index) {
-      // If the current player is different, pause the current one and play the new one
-      players[index] && players[currentPlayerIndex]?.pauseAudio();
-      players[index].playAudio();
-      setCurrentPlayerIndex(index);
-      setCurrentPlayer(players[index]);
-      return;
-    }
-  }
-  return (
-    <View style={styles.container}>
-      <ScrollView style={{ flex: 1, padding: 20, marginTop: 0 }}>
-        {musicFiles.map((music, index) => {
-          return (
-            <TouchableOpacity  key={index}>
-              <MusicListItem
-                key={index}
-                title={music.title}
-                isPlaying={players[index].isPlaying}
-                onPress={() => handlePlayPause(index)}
-              />
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-      {currentPlayer &&
-        <View style={styles.modal}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", width: "100%" }}>
-            <Text>{currentPlayerIndex !== -1 ? musicFiles[currentPlayerIndex].title : "None"}</Text>
+    const router = useRouter();
+    useEffect(() => { }, [currentPlayingIndex, currentPauseIndex]);
+    return (
+        <View style={styles.container}>
+            <ScrollView style={{ flex: 1, padding: 20, marginTop: 0 }}>
+                {musicFiles.map((music, index) => {
+                    return (
+                        <TouchableOpacity key={index} style={styles.item} onPress={() => {
+                            player.pause();
+                            // player.replace();
+                            router.push(`../screens/${index}`)
+                        }}>
+                            <Text style={{ fontSize: 18, fontWeight: 'bold' }}>{music.title}</Text>
+                            <Pressable onPress={() => {
+                                currentSourceRef.current = music.file;
+                                // Update the current music index only if the player is not already playing this music
+                                handlePlayPause(index);
 
-            <View>
-              {currentPlayerIndex !== -1 && (
-                <Pressable onPress={handleModalPress} style={styles.icon} >{
-                  players[currentPlayerIndex].isPlaying
-                    ? <Ionicons name="pause" size={24} color="white" />
-                    : <Ionicons name="play" size={24} color="white" />}
+                            }}>
+                                <Ionicons
+                                    name={currentPlayingIndex !== currentPauseIndex
+                                        && currentPlayingIndex === index
+                                        ? "pause-circle" : "play-circle"}
+                                    size={32}
+                                    color="black"
+                                    style={styles.icon}
+                                />
+                            </Pressable>
+                        </TouchableOpacity>
+                    );
+                })}
+            </ScrollView>
+            {
+                currentPlayingIndex !== -1 && <Pressable style={styles.modal} onPress={() => {
+                    handlePlayPause(currentPlayingIndex);
+                }}>
+                    <Text>{musicFiles[currentPlayingIndex].title}</Text>
+                    <Ionicons
+                        name={currentPauseIndex === -1 ? "pause-circle" : "play-circle"}
+                        size={32}
+                        style={styles.icon}
+                    />
                 </Pressable>
-              )}
-            </View>
-
-          </View>
+            }
         </View>
-      }
-    </View>
-  );
+    );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    flexDirection: "column",
-    backgroundColor: "#fff",
-    // paddingTop: 20,
-  },
-  modal: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 100,
-    backgroundColor: "#f8f8f8",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    transitionDelay: "0.3s",
-  },
-  icon: {
-    color: "white",
-    padding: 8,
-    borderRadius: 50,
-    backgroundColor: "#6b6e49",
-  },
+    container: {
+        flex: 1,
+        flexDirection: "column",
+        backgroundColor: "#fff",
+        // paddingTop: 20,
+    },
+    item: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: "#ccc",
+        marginBottom: 10,
+        borderRadius: 10,
+        backgroundColor: "#f0f0f0",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
+        marginHorizontal: 10,
+        paddingHorizontal: 20,
+        marginVertical: 5,
+        borderWidth: 1,
+    },
+    modal: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 100,
+        backgroundColor: "#f8f8f8",
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        padding: 20,
+        transitionDelay: "0.3s",
+    },
+    icon: {
+        color: "white",
+        padding: 8,
+        borderRadius: 50,
+        backgroundColor: "#6b6e49",
+    },
 });
+export default Home;
